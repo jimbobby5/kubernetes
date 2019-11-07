@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/docker/docker/pkg/mount"
+
 	"k8s.io/klog"
 	"k8s.io/kubernetes/pkg/volume"
 	"k8s.io/kubernetes/pkg/volume/util"
@@ -42,7 +44,7 @@ func (f *flexVolumeUnmounter) TearDown() error {
 }
 
 func (f *flexVolumeUnmounter) TearDownAt(dir string) error {
-	pathExists, pathErr := util.PathExists(dir)
+	pathExists, pathErr := mount.Mounted(dir)
 	if pathErr != nil {
 		// only log warning here since plugins should anyways have to deal with errors
 		klog.Warningf("Error checking path: %v", pathErr)
