@@ -44,32 +44,43 @@ func (f *flexVolumeUnmounter) TearDown() error {
 }
 
 func (f *flexVolumeUnmounter) TearDownAt(dir string) error {
-	pathExists, pathErr := mount.Mounted(dir)
-	if pathErr != nil {
+	klog.Warningf("GR: Doing TearDownAt for %v", dir)
+	mounted, mountErr := mount.Mounted(dir)
+	klog.Warningf("GR: mounted var is %v for %v", mounted, dir)
+	if mountErr != nil {
 		// only log warning here since plugins should anyways have to deal with errors
-		klog.Warningf("Error checking path: %v", pathErr)
-	} else {
-		if !pathExists {
-			klog.Warningf("Warning: Unmount skipped because path does not exist: %v", dir)
-			return nil
-		}
+		klog.Warningf("Error checking path: %v", mountErr)
 	}
 
-	call := f.plugin.NewDriverCall(unmountCmd)
-	call.Append(dir)
-	_, err := call.Run()
-	if isCmdNotSupportedErr(err) {
-		err = (*unmounterDefaults)(f).TearDownAt(dir)
+	if mounted || mountErr != nil {
+	    klog.Warningf("GR: about to run driver unmount for %v", dir)
+		call := f.plugin.NewDriverCall(unmountCmd)
+		call.Append(dir)
+		_, err := call.Run()
+		klog.Warningf("GR: Done unmount command for %v", dir)
+		if isCmdNotSupportedErr(err) {
+			klog.Warningf("GR: command not supported error for %v", dir)
+			err = (*unmounterDefaults)(f).TearDownAt(dir)
+		}
+		if err != nil {
+			klog.Warningf("GR: returning error %s for %v", err, dir)
+			return err
+		}
+	} else {
+		klog.Warningf("Warning: Unmount skipped because path is not mounted: %v", dir)
 	}
-	if err != nil {
-		return err
-	}
+
+	klog.Warningf("GR: About to check if path exists for %v", dir)
 
 	// Flexvolume driver may remove the directory. Ignore if it does.
 	if pathExists, pathErr := util.PathExists(dir); pathErr != nil {
+		klog.Warningf("GR: Error checking if path exists for %v, %s", dir, pathErr)
 		return fmt.Errorf("Error checking if path exists: %v", pathErr)
 	} else if !pathExists {
+		klog.Warningf("GR: Path does not exist for %v", dir)
 		return nil
 	}
+	klog.Warningf("GR: About to remove dir for %v", dir)
 	return os.Remove(dir)
 }
+
