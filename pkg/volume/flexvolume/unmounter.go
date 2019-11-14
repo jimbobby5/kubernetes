@@ -43,21 +43,25 @@ func (f *flexVolumeUnmounter) TearDown() error {
 
 func (f *flexVolumeUnmounter) TearDownAt(dir string) error {
 	mounts, mountCheckErr := f.flexVolume.mounter.GetMountRefs(dir)
+	mounted := len(mounts) > 0
 	if mountCheckErr != nil {
 		// only log warning here since plugins should anyways have to deal with errors
 		klog.Warningf("Error checking path: %v", mountCheckErr)
+	} else {
+		if !mounted {
+			klog.Warningf("Warning: Unmount skipped because path is not mounted: %v", dir)
+			return nil
+		}
 	}
 
-	if len(mounts) > 0 || mountCheckErr != nil {
-		call := f.plugin.NewDriverCall(unmountCmd)
-		call.Append(dir)
-		_, err := call.Run()
-		if isCmdNotSupportedErr(err) {
-			err = (*unmounterDefaults)(f).TearDownAt(dir)
-		}
-		if err != nil {
-			return err
-		}
+	call := f.plugin.NewDriverCall(unmountCmd)
+	call.Append(dir)
+	_, err := call.Run()
+	if isCmdNotSupportedErr(err) {
+		err = (*unmounterDefaults)(f).TearDownAt(dir)
+	}
+	if err != nil {
+		return err
 	}
 
 	// Flexvolume driver may remove the directory. Ignore if it does.
