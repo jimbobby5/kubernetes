@@ -42,7 +42,6 @@ func (f *flexVolumeUnmounter) TearDown() error {
 }
 
 func (f *flexVolumeUnmounter) TearDownAt(dir string) error {
-
 	mounts, mountCheckErr := f.flexVolume.mounter.GetMountRefs(dir)
 	if mountCheckErr != nil {
 		// only log warning here since plugins should anyways have to deal with errors
@@ -69,4 +68,3 @@ func (f *flexVolumeUnmounter) TearDownAt(dir string) error {
 	}
 	return os.Remove(dir)
 }
-
